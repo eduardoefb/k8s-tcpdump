@@ -7,8 +7,6 @@ from pathlib import Path
 import webbrowser
 
 # Set the custom KUBECONFIG path
-KUBECONFIG_PATH = '/home/eduardoefb/scripts/ansible/k8s-proxmox/files/kubeconfig'
-os.environ['KUBECONFIG'] = KUBECONFIG_PATH
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace 'your_secret_key' with a strong key
