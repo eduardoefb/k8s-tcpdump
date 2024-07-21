@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kubernetes Namespace and Pod Selection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .pod-list {
+            margin-top: 20px;
+        }
+        .pod-list label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        .pod-list input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .back-button {
+            margin-top: 20px;
+            background-color: #6c757d;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+        .stop-tcpdump-button {
+            margin-top: 20px;
+            background-color: #d9534f;
+            cursor: not-allowed;
+        }
+        .stop-tcpdump-button.enabled {
+            background-color: #d9534f;
+            cursor: pointer;
+        }
+        .stop-tcpdump-button.enabled:hover {
+            background-color: #c9302c;
+        }
+        .info-text {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .info-text.starting {
+            color: orange;
+        }
+        .info-text.running {
+            color: green;
+        }
+        .info-text.stopping {
+            color: red;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#namespace-select').change(function() {
+                var namespace = $(this).val();
+                $.post('/get_pods', {namespace: namespace}, function(data) {
+                    var podList = $('#pod-list');
+                    podList.empty();
+                    data.forEach(function(pod) {
+                        var podName = Object.keys(pod)[0];
+                        var nodeName = pod[podName];
+                        podList.append('<label><input type="checkbox" name="pods" value="' + podName + ':' + nodeName + '"> ' + podName + ' (Node: ' + nodeName + ')</label>');
+                    });
+                    $('#pod-section').show();
+                    $('#namespace-section').hide();
+                });
+            });
+
+            $('#pod-form').submit(function(event) {
+                event.preventDefault();
+                $('button[type="submit"]').prop('disabled', true);
+                $('#info-text').text('Starting tcpdump...').removeClass().addClass('info-text starting');                
+                $.post('/select_pods', $(this).serialize(), function() {
+                    alert('TCPDUMP is running on the selected pods. Click "Stop Tcpdump" to stop and download the files');
+                    $('#info-text').text('Tcpdump is running').removeClass().addClass('info-text running');
+                    $('#stop-tcpdump').removeClass('disabled').addClass('enabled').prop('disabled', false);
+                });
+            });
+
+            $('#stop-tcpdump').click(function(event) {
+                event.preventDefault();
+                if (!$(this).hasClass('enabled')) return;
+                $('#info-text').text('Stopping tcpdump...').removeClass().addClass('info-text stopping');
+                $('#stop-tcpdump').prop('disabled', true);
+                $.post('/stop_tcpdump', function() {
+                    alert('Tcpdump stopped. Files downloaded!');
+                    window.location.href = '/pcap_files';
+                });
+            });
+
+            $('#back-button').click(function() {
+                $('#pod-section').hide();
+                $('#namespace-section').show();
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Kubernetes Namespace and Pod Selection</h1>
+        <div id="namespace-section">
+            <select id="namespace-select" name="namespace">
+                <option value="" disabled selected>Select a namespace</option>
+                {% for ns in namespaces %}
+                <option value="{{ ns }}">{{ ns }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="pod-section" style="display:none;">
+            <form id="pod-form">
+                <div id="pod-list" class="pod-list"></div>
+                <button type="submit" id="start-tcpdump-btn">Start Tcpdump at Selected Pods</button>
+                <button type="button" id="stop-tcpdump" class="stop-tcpdump-button disabled" disabled>Stop Tcpdump</button>
+                <button type="button" id="back-button" class="back-button">Back</button>
+            </form>
+            <div id="info-text" class="info-text"></div>
+        </div>
+    </div>
+</body>
+</html>
