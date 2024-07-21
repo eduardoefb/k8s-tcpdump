@@ -103,8 +103,7 @@
                 event.preventDefault();
                 $('button[type="submit"]').prop('disabled', true);
                 $('#info-text').text('Starting tcpdump...').removeClass().addClass('info-text starting');                
-                $.post('/select_pods', $(this).serialize(), function() {
-                    alert('TCPDUMP is running on the selected pods. Click "Stop Tcpdump" to stop and download the files');
+                $.post('/select_pods', $(this).serialize(), function() {                    
                     $('#info-text').text('Tcpdump is running').removeClass().addClass('info-text running');
                     $('#stop-tcpdump').removeClass('disabled').addClass('enabled').prop('disabled', false);
                 });
@@ -115,8 +114,7 @@
                 if (!$(this).hasClass('enabled')) return;
                 $('#info-text').text('Stopping tcpdump...').removeClass().addClass('info-text stopping');
                 $('#stop-tcpdump').prop('disabled', true);
-                $.post('/stop_tcpdump', function() {
-                    alert('Tcpdump stopped. Files downloaded!');
+                $.post('/stop_tcpdump', function() {                    
                     window.location.href = '/pcap_files';
                 });
             });
