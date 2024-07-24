@@ -26,27 +26,29 @@ def get_pods_route():
 
 @app.route('/select_pods', methods=['POST'])
 def select_pods():
+    node_ip_mapping = get_node_ips()
+    clear_tcpdump(node_ip_mapping)
     selected_pods = request.form.getlist('pods')
     namespace = session.get('selected_namespace')
+
     pod_node_mapping = {}
     pod_container_mapping = {}
 
-    for item in selected_pods:
-        pod_name, node_name = item.split(':')
-        pod_node_mapping[pod_name] = node_name
+    for pod_name in selected_pods:
+        pod_node_mapping[pod_name] = get_node_name(namespace, pod_name)
         containers = get_containers(namespace, pod_name)
         pod_container_mapping[pod_name] = containers
+        pass
 
-    node_ip_mapping = get_node_ips()
+    
     print(f'Node IP Mapping: {node_ip_mapping}')
     print(f'Selected pods: {pod_node_mapping}')
     print(f'Pod-Container mapping: {pod_container_mapping}')
 
-    clear_tcpdump(node_ip_mapping)
+    
 
-    for pod in selected_pods:
-        pod_name = pod.split(":")[0]
-        worker_node_ip = node_ip_mapping[str(pod.split(":")[1])]
+    for pod_name in selected_pods:        
+        worker_node_ip = node_ip_mapping[pod_node_mapping[pod_name]]
         for container in pod_container_mapping[str(pod_name)]:
             container_tcpdump(worker_node_ip, container, pod_name, user="debian")
             

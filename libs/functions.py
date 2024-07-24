@@ -79,46 +79,159 @@ def get_namespaces():
         print(f"An unexpected error occurred: {e}")
         return []
 
-
 def get_pods(namespace):
-    result = subprocess.run(['kubectl', 'get', 'pods', '-n', namespace, '-o', 'json'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if result.returncode == 0:
-        pods_json = result.stdout
-        pods = []
-        for item in json.loads(pods_json)['items']:
-            pod_name = item['metadata']['name']
-            node_name = item['spec']['nodeName']
-            pods.append({pod_name: node_name})
-        return pods
-    else:
-        return []        
+    # Retrieve the kubeconfig path from the environment variable
+    kubeconfig_path = os.getenv('KUBECONFIG')
+    if not kubeconfig_path:
+        raise EnvironmentError("KUBECONFIG environment variable is not set")
 
-def get_containers(namespace, pod_name):
-    result = subprocess.run(['kubectl', 'get', 'pod', pod_name, '-n', namespace, '-o', 'json'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if result.returncode == 0:
-        pod_json = json.loads(result.stdout)
-        containers = [container['name'] for container in pod_json['spec']['containers']]
-        return containers
-    else:
-        return []        
+    try:
+        # Load the kubeconfig file
+        config.load_kube_config(config_file=kubeconfig_path)
+    except ConfigException as e:
+        print(f"Failed to load kubeconfig: {e}")
+        return []
+
+    try:
+        v1 = client.CoreV1Api()        
+        pods = v1.list_namespaced_pod(namespace)
+        pod_list = [pod.metadata.name for pod in pods.items]
+        return pod_list
+
+    except ApiException as e:
+        print(f"Exception when calling CoreV1Api->list_namespaced_pod: {e}")
+        return []
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return []
+
+
+def get_containers(namespace, pod_name):    
+    kubeconfig_path = os.getenv('KUBECONFIG')
+    if not kubeconfig_path:
+        raise EnvironmentError("KUBECONFIG environment variable is not set")
+    try:
+        config.load_kube_config(config_file=kubeconfig_path)
+    except ConfigException as e:
+        print(f"Failed to load kubeconfig: {e}")
+        return []
+
+    try:
+        v1 = client.CoreV1Api()
+        pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+        container_names = [container.name for container in pod.spec.containers]
+        return container_names
+
+    except ApiException as e:
+        print(f"Exception when calling CoreV1Api->read_namespaced_pod: {e}")
+        return []
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return []
+
+def get_node_ip(namespace, pod_name):
+    # Retrieve the kubeconfig path from the environment variable
+    kubeconfig_path = os.getenv('KUBECONFIG')
+    if not kubeconfig_path:
+        raise EnvironmentError("KUBECONFIG environment variable is not set")
+
+    try:
+        # Load the kubeconfig file
+        config.load_kube_config(config_file=kubeconfig_path)
+    except ConfigException as e:
+        print(f"Failed to load kubeconfig: {e}")
+        return None
+
+    try:
+        # Create an instance of the API class
+        v1 = client.CoreV1Api()
+
+        # Get the specified pod in the specified namespace
+        pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+
+        # Get the name of the node where the pod is running
+        node_name = pod.spec.node_name
+
+        # Get the details of the node
+        node = v1.read_node(name=node_name)
+
+        # Extract the node IP from the node details
+        for address in node.status.addresses:
+            if address.type == "InternalIP":
+                return address.address
+
+        return None
+
+    except ApiException as e:
+        print(f"Exception when calling CoreV1Api->read_namespaced_pod or read_node: {e}")
+        return None
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 def get_node_ips():
-    result = subprocess.run(['kubectl', 'get', 'nodes', '-o', 'json'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if result.returncode == 0:
-        nodes_json = json.loads(result.stdout)
-        node_ips = {}
-        for item in nodes_json['items']:
-            node_name = item['metadata']['name']
-            for address in item['status']['addresses']:
-                if address['type'] == 'InternalIP':
-                    node_ips[node_name] = address['address']
+
+    kubeconfig_path = os.getenv('KUBECONFIG')
+    if not kubeconfig_path:
+        raise EnvironmentError("KUBECONFIG environment variable is not set")
+    try:
+        config.load_kube_config(config_file=kubeconfig_path)
+    except ConfigException as e:
+        print(f"Failed to load kubeconfig: {e}")
+        return {}
+
+    try:        
+        v1 = client.CoreV1Api()
+        nodes = v1.list_node()
+        node_info = {}
+        for node in nodes.items:
+            node_name = node.metadata.name
+            node_ip = None
+            for address in node.status.addresses:
+                if address.type == "InternalIP":
+                    node_ip = address.address
                     break
-        return node_ips
-    else:
-        return {}    
+            if node_ip:
+                node_info[node_name] = node_ip
+
+        return node_info
+
+    except ApiException as e:
+        print(f"Exception when calling CoreV1Api->list_node: {e}")
+        return {}
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return {}
+
+
+def get_node_name(namespace, pod_name):    
+    kubeconfig_path = os.getenv('KUBECONFIG')
+    if not kubeconfig_path:
+        raise EnvironmentError("KUBECONFIG environment variable is not set")
+
+    try:        
+        config.load_kube_config(config_file=kubeconfig_path)
+    except ConfigException as e:
+        print(f"Failed to load kubeconfig: {e}")
+        return None
+
+    try:        
+        v1 = client.CoreV1Api()
+        pod = v1.read_namespaced_pod(name=pod_name, namespace=namespace)        
+        node_name = pod.spec.node_name
+        return node_name
+
+    except ApiException as e:
+        print(f"Exception when calling CoreV1Api->read_namespaced_pod: {e}")
+        return None
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 def get_magic_str():
     return "7eca88064c63dcc9"

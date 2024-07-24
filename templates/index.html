@@ -89,10 +89,9 @@
                 $.post('/get_pods', {namespace: namespace}, function(data) {
                     var podList = $('#pod-list');
                     podList.empty();
-                    data.forEach(function(pod) {
-                        var podName = Object.keys(pod)[0];
-                        var nodeName = pod[podName];
-                        podList.append('<label><input type="checkbox" name="pods" value="' + podName + ':' + nodeName + '"> ' + podName + ' (Node: ' + nodeName + ')</label>');
+                    data.forEach(function(pod) {                        
+                        var podName = pod;                        
+                        podList.append('<label><input type="checkbox" name="pods" value="' + podName + '"> ' + podName + ')</label>');
                     });
                     $('#pod-section').show();
                     $('#namespace-section').hide();
