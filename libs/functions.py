@@ -1,9 +1,13 @@
 
+import os
 import subprocess
 import json
 from datetime import datetime
 from pathlib import Path
 import shutil
+from kubernetes import client, config
+from kubernetes.client.exceptions import ApiException
+from kubernetes.config.config_exception import ConfigException
 
 def stop_tcpdump():
     magic_str = get_magic_str()
@@ -42,14 +46,37 @@ def stop_tcpdump():
     print("Tcpdump stopped and pcap files downloaded.")
 
 
-
 def get_namespaces():
-    result = subprocess.run(['kubectl', 'get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if result.returncode == 0:
-        namespaces = result.stdout.split()
-        return namespaces
-    else:
+    # Retrieve the kubeconfig path from the environment variable
+    kubeconfig_path = os.getenv('KUBECONFIG')
+    if not kubeconfig_path:
+        raise EnvironmentError("KUBECONFIG environment variable is not set")
+
+    try:
+        # Load the kubeconfig file
+        config.load_kube_config(config_file=kubeconfig_path)
+    except ConfigException as e:
+        print(f"Failed to load kubeconfig: {e}")
+        return []
+
+    try:
+        # Create an instance of the API class
+        v1 = client.CoreV1Api()
+
+        # List all namespaces
+        namespaces = v1.list_namespace()
+
+        # Extract the names of the namespaces and return as a list
+        namespace_list = [ns.metadata.name for ns in namespaces.items]
+        
+        return namespace_list
+
+    except ApiException as e:
+        print(f"Exception when calling CoreV1Api->list_namespace: {e}")
+        return []
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
         return []
 
 

@@ -6,7 +6,6 @@ from libs.functions import *
 from pathlib import Path
 import webbrowser
 
-# Set the custom KUBECONFIG path
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace 'your_secret_key' with a strong key
