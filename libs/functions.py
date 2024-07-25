@@ -94,8 +94,8 @@ def get_pods(namespace):
 
     try:
         v1 = client.CoreV1Api()        
-        pods = v1.list_namespaced_pod(namespace)
-        pod_list = [pod.metadata.name for pod in pods.items]
+        pods = v1.list_namespaced_pod(namespace)        
+        pod_list = [pod.metadata.name for pod in pods.items if pod.status.phase == "Running"]
         return pod_list
 
     except ApiException as e:
@@ -105,7 +105,6 @@ def get_pods(namespace):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return []
-
 
 def get_containers(namespace, pod_name):    
     kubeconfig_path = os.getenv('KUBECONFIG')

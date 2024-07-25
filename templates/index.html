@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Kubernetes Namespace and Pod Selection</title>
+    <title>Kubernetes tcpdump</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -50,10 +50,31 @@
         .back-button {
             margin-top: 20px;
             background-color: #6c757d;
+            cursor: pointer;
         }
+        .back-button.disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }          
         .back-button:hover {
             background-color: #5a6268;
         }
+        .start-tcpdump-button {
+            margin-top: 20px;
+            background-color: #1c0590;
+            cursor: pointer;
+        }  
+        
+        .start-tcpdump-button.disabled {
+            background-color: #1c0590;
+            cursor: not-allowed;
+        }  
+        
+        .start-tcpdump-button.enabled:hover {
+            margin-top: 20px;
+            background-color: #1c059f;
+            cursor: pointer;
+        }         
         .stop-tcpdump-button {
             margin-top: 20px;
             background-color: #d9534f;
@@ -101,16 +122,19 @@
             $('#pod-form').submit(function(event) {
                 event.preventDefault();
                 $('button[type="submit"]').prop('disabled', true);
-                $('#info-text').text('Starting tcpdump...').removeClass().addClass('info-text starting');                
+                $('#info-text').text('Starting tcpdump...').removeClass().addClass('info-text starting');
+                $('#start-tcpdump-btn').addClass('disabled').prop('disabled', true);
+                $('#back-button').addClass('disabled').prop('disabled', true);
                 $.post('/select_pods', $(this).serialize(), function() {                    
                     $('#info-text').text('Tcpdump is running').removeClass().addClass('info-text running');
-                    $('#stop-tcpdump').removeClass('disabled').addClass('enabled').prop('disabled', false);
+                    $('#stop-tcpdump').removeClass('disabled').addClass('enabled').prop('disabled', false);                                        
                 });
             });
 
             $('#stop-tcpdump').click(function(event) {
                 event.preventDefault();
                 if (!$(this).hasClass('enabled')) return;
+                $('#stop-tcpdump').removeClass('enabled').addClass('disabled').prop('disabled', true);
                 $('#info-text').text('Stopping tcpdump...').removeClass().addClass('info-text stopping');
                 $('#stop-tcpdump').prop('disabled', true);
                 $.post('/stop_tcpdump', function() {                    
@@ -127,7 +151,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Kubernetes Namespace and Pod Selection</h1>
+        <h1>Kubernetes tcpdump</h1>
         <div id="namespace-section">
             <select id="namespace-select" name="namespace">
                 <option value="" disabled selected>Select a namespace</option>
@@ -136,10 +160,12 @@
                 {% endfor %}
             </select>
         </div>
+        
         <div id="pod-section" style="display:none;">
+            <option value="">Select the pod(s):</option>
             <form id="pod-form">
                 <div id="pod-list" class="pod-list"></div>
-                <button type="submit" id="start-tcpdump-btn">Start Tcpdump at Selected Pods</button>
+                <button type="submit" id="start-tcpdump-btn" class="start-tcpdump-button">Start Tcpdump at Selected Pods</button>
                 <button type="button" id="stop-tcpdump" class="stop-tcpdump-button disabled" disabled>Stop Tcpdump</button>
                 <button type="button" id="back-button" class="back-button">Back</button>
             </form>
