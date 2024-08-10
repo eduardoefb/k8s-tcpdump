@@ -8,6 +8,8 @@ import shutil
 from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
 from kubernetes.config.config_exception import ConfigException
+import random
+import string
 
 def stop_tcpdump():
     magic_str = get_magic_str()
@@ -259,6 +261,7 @@ def container_tcpdump(worker_node_ip, container, pod_name, user="debian"):
     print(f"Executing {command}...")
     container_output = subprocess.run(command, shell=True, capture_output=True, text=True)
     container_pid = json.loads(container_output.stdout)["info"]["pid"]
-    command=f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo nohup nice timeout { timeout } nsenter --target {container_pid} --net -- {tcpdump_command}' -w /tmp/{timestamp}-{magic_str}-{pod_name}-{container}.pcap >/dev/null 2>&1&"            
+    random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    command=f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo nohup nice timeout { timeout } nsenter --target {container_pid} --net -- {tcpdump_command}' -w /tmp/{timestamp}-{random_string}-{magic_str}-{pod_name}-{container}.pcap >/dev/null 2>&1&"            
     print(f"Executing {command}...")
     subprocess.run(command, shell=True, capture_output=True, text=True)            
