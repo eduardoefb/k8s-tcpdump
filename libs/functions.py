@@ -256,12 +256,14 @@ def container_tcpdump(worker_node_ip, container, pod_name, user="debian"):
 
     command = f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo crictl ps' 2>/dev/null | awk '/ {container} .* {pod_name}/ {{print $1}}'"
     print(f"Executing {command}...")
-    container_id = str(subprocess.run(command, shell=True, capture_output=True, text=True).stdout).strip()
-    command = f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo crictl inspect {container_id}'"
-    print(f"Executing {command}...")
-    container_output = subprocess.run(command, shell=True, capture_output=True, text=True)
-    container_pid = json.loads(container_output.stdout)["info"]["pid"]
-    random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    command=f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo nohup nice timeout { timeout } nsenter --target {container_pid} --net -- {tcpdump_command}' -w /tmp/{timestamp}-{random_string}-{magic_str}-{pod_name}-{container}.pcap >/dev/null 2>&1&"            
-    print(f"Executing {command}...")
-    subprocess.run(command, shell=True, capture_output=True, text=True)            
+    container_output = str(subprocess.run(command, shell=True, capture_output=True, text=True).stdout).strip()
+    
+    for container_id in container_output.split('\n'):
+        command = f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo crictl inspect {container_id}'"
+        print(f"Executing {command}...")
+        container_output = subprocess.run(command, shell=True, capture_output=True, text=True)
+        container_pid = json.loads(container_output.stdout)["info"]["pid"]
+        random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        command=f"ssh -o StrictHostKeyChecking=no debian@{worker_node_ip} 'sudo nohup nice timeout { timeout } nsenter --target {container_pid} --net -- {tcpdump_command}' -w /tmp/{timestamp}-{random_string}-{magic_str}-{pod_name}-{container}.pcap >/dev/null 2>&1&"            
+        print(f"Executing {command}...")
+        subprocess.run(command, shell=True, capture_output=True, text=True)            
